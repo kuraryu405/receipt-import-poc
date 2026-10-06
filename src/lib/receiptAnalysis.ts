@@ -1,8 +1,13 @@
 import { GoogleGenAI } from "@google/genai";
-import { safeParseBatchReceipts, safeParseReceipt } from "@/lib/receiptSchema";
+import {
+  IMAGE_ID_PATTERN,
+  safeParseBatchReceipts,
+  safeParseReceipt,
+} from "@/lib/receiptSchema";
 import { MAX_BATCH_FILES, type AllowedImageMimeType } from "@/lib/imageUpload";
 import type {
   BatchReceiptResult,
+  BatchIssues,
   Receipt,
   ReceiptAnalysisMetadata,
   ReceiptUsage,
@@ -29,16 +34,6 @@ export interface AnalyzeReceiptBatchInput {
 
 export interface AnalyzeReceiptBatchResult extends ReceiptAnalysisMetadata {
   receipts: BatchReceiptResult[];
-}
-
-/** バッチ画像 ID に使う文字制約。ルートと同一の正規表現を使う。 */
-const BATCH_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
-
-/** ID 不一致の内訳。安全な入力 ID のみを返し、上流の未知 ID は件数のみで表す。 */
-export interface BatchIssues {
-  missingImageIds: string[];
-  duplicateImageIds: string[];
-  unexpectedImageIdCount: number;
 }
 
 /** HTTP ステータスに対応付けられた解析失敗。メッセージは利用者向け日本語のみを持つ。 */
@@ -187,22 +182,7 @@ export async function analyzeReceiptImage(
     throw toAnalysisError(error);
   }
 
-  if (!outputText || outputText.trim() === "") {
-    throw new ReceiptAnalysisError(
-      502,
-      "AIからの応答が空でした。画像を確認して再度お試しください。",
-    );
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(outputText);
-  } catch {
-    throw new ReceiptAnalysisError(
-      502,
-      "AIの応答をJSONとして解釈できませんでした。再度お試しください。",
-    );
-  }
+  const parsed = parseAnalysisOutput(outputText);
 
   const validated = safeParseReceipt(parsed);
   if (!validated.success) {
@@ -302,7 +282,7 @@ export async function analyzeReceiptImages(
   for (const image of images) {
     if (
       typeof image.imageId !== "string" ||
-      !BATCH_ID_PATTERN.test(image.imageId) ||
+      !IMAGE_ID_PATTERN.test(image.imageId) ||
       seen.has(image.imageId)
     ) {
       throw new ReceiptAnalysisError(
@@ -364,22 +344,7 @@ export async function analyzeReceiptImages(
     throw toAnalysisError(error);
   }
 
-  if (!outputText || outputText.trim() === "") {
-    throw new ReceiptAnalysisError(
-      502,
-      "AIからの応答が空でした。画像を確認して再度お試しください。",
-    );
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(outputText);
-  } catch {
-    throw new ReceiptAnalysisError(
-      502,
-      "AIの応答をJSONとして解釈できませんでした。再度お試しください。",
-    );
-  }
+  const parsed = parseAnalysisOutput(outputText);
 
   const validated = safeParseBatchReceipts(parsed);
   if (!validated.success) {
@@ -586,4 +551,22 @@ function isTimeoutError(error: unknown): boolean {
     return false;
   }
   return (error as { name?: unknown }).name === "APIConnectionTimeoutError";
+}
+
+function parseAnalysisOutput(outputText: string | undefined): unknown {
+  if (!outputText || outputText.trim() === "") {
+    throw new ReceiptAnalysisError(
+      502,
+      "AIからの応答が空でした。画像を確認して再度お試しください。",
+    );
+  }
+
+  try {
+    return JSON.parse(outputText);
+  } catch {
+    throw new ReceiptAnalysisError(
+      502,
+      "AIの応答をJSONとして解釈できませんでした。再度お試しください。",
+    );
+  }
 }

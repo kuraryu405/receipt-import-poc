@@ -10,10 +10,11 @@ import { safeParseReceipt } from "@/lib/receiptSchema";
 import type {
   Receipt,
   ReceiptAnalysisMetadata,
+  CompletedBatchRun,
   ReceiptUsage,
 } from "@/types/receipt";
 
-export const CLIENT_TIMEOUT_MS = 360_000;
+const CLIENT_TIMEOUT_MS = 360_000;
 
 /** Date に格納できる待機秒数の上限。タイマーは1秒ずつ更新する。 */
 const MAX_RETRY_AFTER_SEC = Math.floor((8_640_000_000_000_000 - Date.now()) / 1000);
@@ -27,11 +28,6 @@ export interface ReceiptBatchItem {
   status: BatchItemStatus;
   receipt: Receipt | null;
   error: string | null;
-}
-
-export interface CompletedBatchRun {
-  imageCount: number;
-  metadata: ReceiptAnalysisMetadata;
 }
 
 interface BatchErrorBody {
@@ -52,7 +48,6 @@ function clampRetrySeconds(value: number): number | null {
   if (!Number.isFinite(value)) return null;
   if (value < 0) return null;
   const ceiled = Math.ceil(value);
-  if (!Number.isFinite(ceiled) || ceiled < 0) return null;
   return Math.min(ceiled, MAX_RETRY_AFTER_SEC);
 }
 
@@ -141,12 +136,8 @@ export function useReceiptAnalysis() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [cooldown, setCooldown] = useState<{
     untilMs: number;
-    totalSec: number;
-    message: string;
   } | null>(null);
   const [cooldownRemainingSec, setCooldownRemainingSec] = useState(0);
-  const [lastMetadata, setLastMetadata] =
-    useState<ReceiptAnalysisMetadata | null>(null);
   const [completedRuns, setCompletedRuns] = useState<CompletedBatchRun[]>([]);
 
   const isProcessingRef = useRef(false);
@@ -328,6 +319,16 @@ export function useReceiptAnalysis() {
       if (isProcessingRef.current) return;
       isProcessingRef.current = true;
       const sentIds = targets.map((item) => item.imageId);
+      const failBatch = (message: string): void => {
+        setBatchError(message);
+        commitItems(
+          itemsRef.current.map((item) =>
+            sentIds.includes(item.imageId)
+              ? { ...item, status: "error" as const, error: message }
+              : item,
+          ),
+        );
+      };
       if (mountedRef.current) {
         setIsProcessing(true);
         setBatchError(null);
@@ -363,14 +364,7 @@ export function useReceiptAnalysis() {
             error instanceof DOMException && error.name === "AbortError"
               ? "解析がタイムアウトしました（360秒）。画像を減らして再度お試しください。"
               : "通信中にエラーが発生しました。ネットワーク接続を確認して再度お試しください。";
-          commitItems(
-            itemsRef.current.map((item) =>
-              sentIds.includes(item.imageId)
-                ? { ...item, status: "error" as const, error: message }
-                : item,
-            ),
-          );
-          setBatchError(message);
+          failBatch(message);
           return;
         }
 
@@ -397,23 +391,16 @@ export function useReceiptAnalysis() {
           if (response.status === 429 && cooldownSec != null && cooldownSec > 0) {
             const untilMs = Date.now() + cooldownSec * 1000;
             const retryAt = new Date(untilMs).toLocaleString("ja-JP", {
-      month: "numeric",
-      day: "numeric",
+              month: "numeric",
+              day: "numeric",
               hour: "2-digit",
               minute: "2-digit",
               second: "2-digit",
             });
             const waitMessage = `${message} ${retryAt}以降に再試行を受け付けます。利用枠の回復時刻は保証されません。`;
-            setCooldown({ untilMs, totalSec: cooldownSec, message: waitMessage });
+            setCooldown({ untilMs });
             setCooldownRemainingSec(cooldownSec);
-            setBatchError(waitMessage);
-            commitItems(
-              itemsRef.current.map((item) =>
-                sentIds.includes(item.imageId)
-                  ? { ...item, status: "error" as const, error: waitMessage }
-                  : item,
-              ),
-            );
+            failBatch(waitMessage);
             return;
           }
           const issues = errorBody.batchIssues;
@@ -442,14 +429,7 @@ export function useReceiptAnalysis() {
             }
             if (parts.length > 0) detail = `${message}（${parts.join("／")}）`;
           }
-          setBatchError(detail);
-          commitItems(
-            itemsRef.current.map((item) =>
-              sentIds.includes(item.imageId)
-                ? { ...item, status: "error" as const, error: detail }
-                : item,
-            ),
-          );
+          failBatch(detail);
           return;
         }
 
@@ -463,14 +443,7 @@ export function useReceiptAnalysis() {
         if (!Array.isArray(rawReceipts) || !metadata) {
           const message =
             "サーバーから正しい応答を受け取れませんでした。再度お試しください。";
-          setBatchError(message);
-          commitItems(
-            itemsRef.current.map((item) =>
-              sentIds.includes(item.imageId)
-                ? { ...item, status: "error" as const, error: message }
-                : item,
-            ),
-          );
+          failBatch(message);
           return;
         }
         const normalized: { imageId: string; receipt: Receipt }[] = [];
@@ -514,14 +487,7 @@ export function useReceiptAnalysis() {
             missingNames.length > 0
               ? `応答が送信と一致しません（一括は未確定）。未確定: ${missingNames.join("、")}`
               : "AIの応答形式が不正でした（一括は未確定）。再度お試しください。未知・欠落・重複のある出力は採用していません。";
-          setBatchError(message);
-          commitItems(
-            itemsRef.current.map((item) =>
-              sentIds.includes(item.imageId)
-                ? { ...item, status: "error" as const, error: message }
-                : item,
-            ),
-          );
+          failBatch(message);
           return;
         }
 
@@ -538,7 +504,6 @@ export function useReceiptAnalysis() {
               : item,
           ),
         );
-        setLastMetadata(metadata);
         setCompletedRuns((previous) => [
           ...previous,
           { imageCount: sentIds.length, metadata },
@@ -591,7 +556,6 @@ export function useReceiptAnalysis() {
     cooldownRemainingSec,
     cooldownRetryAtText,
     inCooldown,
-    lastMetadata,
     completedRuns,
     totalBytes,
     isOverTotalLimit,

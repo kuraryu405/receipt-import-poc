@@ -15,7 +15,7 @@ export const MAX_BATCH_FILES = 10;
 export const MAX_BATCH_SIZE_MIB = 60;
 export const MAX_BATCH_SIZE_BYTES = MAX_BATCH_SIZE_MIB * 1024 * 1024;
 /** 選択 UI が保持できる最大ファイル数。 */
-export const MAX_SELECTED_FILES = 10;
+export const MAX_SELECTED_FILES = MAX_BATCH_FILES;
 
 export type AllowedImageMimeType = (typeof ALLOWED_IMAGE_MIME_TYPES)[number];
 

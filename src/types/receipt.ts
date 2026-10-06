@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import type { receiptItemSchema, receiptSchema } from "@/lib/receiptSchema";
+import type { receiptSchema } from "@/lib/receiptSchema";
 
 /**
  * レシートの共有型。
@@ -7,9 +7,14 @@ import type { receiptItemSchema, receiptSchema } from "@/lib/receiptSchema";
  * 読み取れなかった値は null で表現する。
  */
 
-export type ReceiptItem = z.infer<typeof receiptItemSchema>;
-
 export type Receipt = z.infer<typeof receiptSchema>;
+
+/** 入力にないIDは値を返さず、件数だけを伝える。 */
+export interface BatchIssues {
+  missingImageIds: string[];
+  duplicateImageIds: string[];
+  unexpectedImageIdCount: number;
+}
 
 export interface ReceiptUsage {
   inputTokens: number | null;
@@ -36,5 +41,10 @@ export type BatchReceiptResult = Receipt & {
 
 export interface AnalyzeReceiptBatchResponse {
   receipts: BatchReceiptResult[];
+  metadata: ReceiptAnalysisMetadata;
+}
+
+export interface CompletedBatchRun {
+  imageCount: number;
   metadata: ReceiptAnalysisMetadata;
 }

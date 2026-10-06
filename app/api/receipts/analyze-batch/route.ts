@@ -1,3 +1,5 @@
+import { errorResponse } from "@/lib/receiptApi";
+import { IMAGE_ID_PATTERN } from "@/lib/receiptSchema";
 import {
   DEFAULT_GEMINI_MODEL,
   ReceiptAnalysisError,
@@ -17,52 +19,6 @@ export const runtime = "nodejs";
 
 const FILES_FIELD = "files";
 const IMAGE_IDS_FIELD = "imageIds";
-const BATCH_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
-
-function errorResponse(
-  status: number,
-  message: string,
-  options?: {
-    batchIssues?: {
-      missingImageIds: string[];
-      duplicateImageIds: string[];
-      unexpectedImageIdCount: number;
-    };
-    retryAfterSeconds?: number;
-  },
-): Response {
-  const body: {
-    error: string;
-    batchIssues?: {
-      missingImageIds: string[];
-      duplicateImageIds: string[];
-      unexpectedImageIdCount: number;
-    };
-    retryAfterSeconds?: number;
-  } = { error: message };
-  if (options?.batchIssues) {
-    body.batchIssues = options.batchIssues;
-  }
-  const headers: Record<string, string> = {};
-  if (
-    options?.retryAfterSeconds !== undefined &&
-    Number.isInteger(options.retryAfterSeconds) &&
-    (options.retryAfterSeconds as number) >= 0
-  ) {
-    body.retryAfterSeconds = options.retryAfterSeconds;
-    headers["Retry-After"] = String(options.retryAfterSeconds);
-  }
-  return Response.json(body, { status, headers });
-}
-
-function toErrorResponse(error: ReceiptAnalysisError): Response {
-  return errorResponse(error.status, error.message, {
-    ...(error.batchIssues ? { batchIssues: error.batchIssues } : {}),
-    ...(error.retryAfterSeconds !== undefined
-      ? { retryAfterSeconds: error.retryAfterSeconds }
-      : {}),
-  });
-}
 
 export async function POST(request: Request): Promise<Response> {
   let formData: FormData;
@@ -117,7 +73,7 @@ export async function POST(request: Request): Promise<Response> {
   for (const imageId of imageIds) {
     if (
       typeof imageId !== "string" ||
-      !BATCH_ID_PATTERN.test(imageId) ||
+      !IMAGE_ID_PATTERN.test(imageId) ||
       seen.has(imageId)
     ) {
       return errorResponse(
@@ -216,7 +172,12 @@ export async function POST(request: Request): Promise<Response> {
     } satisfies AnalyzeReceiptBatchResponse);
   } catch (error) {
     if (error instanceof ReceiptAnalysisError) {
-      return toErrorResponse(error);
+      return errorResponse(error.status, error.message, {
+        ...(error.batchIssues ? { batchIssues: error.batchIssues } : {}),
+        ...(error.retryAfterSeconds !== undefined
+          ? { retryAfterSeconds: error.retryAfterSeconds }
+          : {}),
+      });
     }
     return errorResponse(
       500,

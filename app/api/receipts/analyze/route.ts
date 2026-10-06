@@ -1,3 +1,4 @@
+import { errorResponse } from "@/lib/receiptApi";
 import {
   DEFAULT_GEMINI_MODEL,
   ReceiptAnalysisError,
@@ -14,26 +15,6 @@ import type { AnalyzeReceiptResponse } from "@/types/receipt";
 export const runtime = "nodejs";
 
 const FILE_FIELD = "file";
-
-function errorResponse(
-  status: number,
-  message: string,
-  retryAfterSeconds?: number,
-): Response {
-  const body: { error: string; retryAfterSeconds?: number } = {
-    error: message,
-  };
-  const headers: Record<string, string> = {};
-  if (
-    retryAfterSeconds !== undefined &&
-    Number.isInteger(retryAfterSeconds) &&
-    retryAfterSeconds >= 0
-  ) {
-    body.retryAfterSeconds = retryAfterSeconds;
-    headers["Retry-After"] = String(retryAfterSeconds);
-  }
-  return Response.json(body, { status, headers });
-}
 
 export async function POST(request: Request): Promise<Response> {
   let formData: FormData;
@@ -103,7 +84,9 @@ export async function POST(request: Request): Promise<Response> {
       return errorResponse(
         error.status,
         error.message,
-        error.retryAfterSeconds,
+        error.retryAfterSeconds !== undefined
+          ? { retryAfterSeconds: error.retryAfterSeconds }
+          : undefined,
       );
     }
     return errorResponse(

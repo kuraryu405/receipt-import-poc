@@ -1,0 +1,37 @@
+{
+  "model": "unknown",
+  "processed": 0,
+  "skipped": 0,
+  "failed": 0,
+  "fields": {
+    "merchant": {
+      "correct": 0,
+      "scored": 0,
+      "accuracy": null
+    },
+    "date": {
+      "correct": 0,
+      "scored": 0,
+      "accuracy": null
+    },
+    "total": {
+      "correct": 0,
+      "scored": 0,
+      "accuracy": null
+    },
+    "tax": {
+      "correct": 0,
+      "scored": 0,
+      "accuracy": null
+    }
+  },
+  "lineItems": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 0,
+    "precision": null,
+    "recall": null,
+    "f1": null,
+    "note": "PoC診断用の簡易指標であり、JaWildText論文の正式なKIE F1評価手順の再現ではない。"
+  }
+}

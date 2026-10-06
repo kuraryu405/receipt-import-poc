@@ -15,8 +15,24 @@ export const runtime = "nodejs";
 
 const FILE_FIELD = "file";
 
-function errorResponse(status: number, message: string): Response {
-  return Response.json({ error: message }, { status });
+function errorResponse(
+  status: number,
+  message: string,
+  retryAfterSeconds?: number,
+): Response {
+  const body: { error: string; retryAfterSeconds?: number } = {
+    error: message,
+  };
+  const headers: Record<string, string> = {};
+  if (
+    retryAfterSeconds !== undefined &&
+    Number.isInteger(retryAfterSeconds) &&
+    retryAfterSeconds >= 0
+  ) {
+    body.retryAfterSeconds = retryAfterSeconds;
+    headers["Retry-After"] = String(retryAfterSeconds);
+  }
+  return Response.json(body, { status, headers });
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -84,7 +100,11 @@ export async function POST(request: Request): Promise<Response> {
     } satisfies AnalyzeReceiptResponse);
   } catch (error) {
     if (error instanceof ReceiptAnalysisError) {
-      return errorResponse(error.status, error.message);
+      return errorResponse(
+        error.status,
+        error.message,
+        error.retryAfterSeconds,
+      );
     }
     return errorResponse(
       500,

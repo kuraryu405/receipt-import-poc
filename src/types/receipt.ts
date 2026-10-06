@@ -15,6 +15,8 @@ export interface ReceiptUsage {
   inputTokens: number | null;
   outputTokens: number | null;
   totalTokens: number | null;
+  /** thinking モデルの thought トークン。非対応時は null。後方互換のため任意。 */
+  thoughtTokens?: number | null;
 }
 
 export interface ReceiptAnalysisMetadata {
@@ -25,5 +27,14 @@ export interface ReceiptAnalysisMetadata {
 
 export interface AnalyzeReceiptResponse {
   receipt: Receipt;
+  metadata: ReceiptAnalysisMetadata;
+}
+
+export type BatchReceiptResult = Receipt & {
+  imageId: string;
+};
+
+export interface AnalyzeReceiptBatchResponse {
+  receipts: BatchReceiptResult[];
   metadata: ReceiptAnalysisMetadata;
 }

@@ -99,6 +99,10 @@ p {
   font-size: 0.875rem;
 }
 
+.result .help-text {
+  overflow-wrap: anywhere;
+}
+
 .flow-note {
   color: var(--color-gray-600);
   font-size: 0.875rem;
@@ -109,6 +113,11 @@ p {
   display: grid;
   grid-template-columns: 1fr;
   row-gap: 8px;
+}
+
+.upload,
+.result {
+  min-width: 0;
 }
 
 @media (min-width: 64rem) {
@@ -159,7 +168,7 @@ p {
   width: auto;
   max-width: 100%;
   height: auto;
-  max-height: min(50vh, 36rem);
+  max-height: min(40vh, 24rem);
   margin: 0 auto 8px;
   border: 1px solid var(--color-gray-200);
   object-fit: contain;
@@ -196,6 +205,11 @@ p {
   color: var(--color-key-900);
   font: inherit;
   font-weight: bold;
+}
+
+.file-input:disabled::file-selector-button {
+  border-color: var(--color-gray-420);
+  color: var(--color-gray-536);
 }
 
 @media (hover: hover) {
@@ -241,12 +255,13 @@ p {
   align-items: center;
   justify-content: center;
   min-width: 96px;
+  max-width: 100%;
   min-height: 48px;
   border-radius: 8px;
   padding: 8px 16px;
   font: inherit;
   font-weight: bold;
-  line-height: 1;
+  line-height: 1.5;
   letter-spacing: 0.02em;
 }
 
@@ -276,6 +291,30 @@ p {
 
 .analyze-button {
   margin-top: 24px;
+}
+
+/* 副ボタン（クリア・再試行・ダウンロード共通）。主ボタンとの階層を保つ。 */
+.button--secondary {
+  border: 1px solid var(--color-key-900);
+  background-color: var(--color-white);
+  color: var(--color-key-900);
+  margin-top: 12px;
+}
+
+@media (hover: hover) {
+  .button--secondary:hover:not(:disabled) {
+    background-color: var(--color-key-200);
+  }
+}
+
+.button--secondary:active:not(:disabled) {
+  background-color: var(--color-key-200);
+}
+
+.button--secondary:disabled {
+  border-color: var(--color-gray-420);
+  background-color: var(--color-white);
+  color: var(--color-gray-536);
 }
 
 /* 処理中表示 */
@@ -375,6 +414,14 @@ progress {
 /* テーブル */
 .table-scroll {
   overflow-x: auto;
+  overflow-y: auto;
+  max-width: 100%;
+  max-height: 22rem;
+}
+
+.selection-list {
+  overflow-y: auto;
+  max-height: 22rem;
 }
 
 .items-table {
@@ -399,6 +446,8 @@ progress {
 }
 
 .items-table thead th {
+  position: sticky;
+  top: 0;
   background-color: var(--color-gray-50);
   color: var(--color-gray-900);
 }
@@ -414,6 +463,41 @@ progress {
 .items-table th:nth-child(n + 2) {
   text-align: right;
   white-space: nowrap;
+}
+
+/* 一括選択リスト: ファイル名ボタンは押下状態を太字で示す（DADSの配色は変えない） */
+.items-table td:first-child {
+  overflow-wrap: anywhere;
+}
+
+.items-table button {
+  min-height: 44px;
+  max-width: 100%;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  white-space: normal;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.items-table button[aria-pressed="true"] {
+  font-weight: bold;
+}
+
+.items-table button:disabled {
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+/* 一括処理の記録: 作業域グリッドの下に置く集約表示 */
+section[aria-labelledby="batch-meta-heading"] {
+  margin-top: 32px;
 }
 
 /* 開閉式のJSON表示 */

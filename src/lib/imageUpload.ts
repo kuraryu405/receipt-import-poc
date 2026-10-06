@@ -9,6 +9,14 @@ export const ALLOWED_IMAGE_MIME_TYPES = [
 export const IMAGE_ACCEPT_ATTRIBUTE = ALLOWED_IMAGE_MIME_TYPES.join(",");
 export const SUPPORTED_FORMAT_LABEL = "JPEG・PNG・WebP";
 
+/** バッチ解析の共有制限。最大10件を1リクエストで処理する。 */
+export const MAX_BATCH_FILES = 10;
+/** バッチ合計の保守的な PoC 上限（60MiB raw → base64 約80MiB < inline 100MB）。 */
+export const MAX_BATCH_SIZE_MIB = 60;
+export const MAX_BATCH_SIZE_BYTES = MAX_BATCH_SIZE_MIB * 1024 * 1024;
+/** 選択 UI が保持できる最大ファイル数。 */
+export const MAX_SELECTED_FILES = 10;
+
 export type AllowedImageMimeType = (typeof ALLOWED_IMAGE_MIME_TYPES)[number];
 
 export function isAllowedImageMimeType(

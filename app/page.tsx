@@ -7,7 +7,7 @@ export default function Home() {
       <p>
         レシート画像をアップロードすると、内容を自動で読み取って一覧表示します。読み取り結果は必ず画像と見比べてご確認ください。
       </p>
-      <p className="flow-note">手順：画像を選択 → Geminiで解析 → 読み取り結果を確認</p>
+      <p className="flow-note">手順：画像を選択（複数可）→ まとめて1回で解析 → 読み取り結果を確認</p>
 
       <ReceiptImporter />
 

@@ -33,3 +33,21 @@ export function parseReceipt(data: unknown): ReceiptSchemaOutput {
 export function safeParseReceipt(data: unknown) {
   return receiptSchema.safeParse(data);
 }
+
+/** バッチ応答の実行時スキーマ。receipt フィールド群に imageId を持つフラット形式。 */
+export const batchReceiptResultSchema = receiptSchema.extend({
+  imageId: z.string(),
+});
+
+export const batchReceiptResponseSchema = z.object({
+  receipts: z.array(batchReceiptResultSchema),
+});
+
+export type BatchReceiptResponseOutput = z.infer<
+  typeof batchReceiptResponseSchema
+>;
+
+/** 失敗時に例外ではなく結果オブジェクトを返したい場合に使う。 */
+export function safeParseBatchReceipts(data: unknown) {
+  return batchReceiptResponseSchema.safeParse(data);
+}

@@ -1,0 +1,8 @@
+{
+  "imageCount": 1,
+  "appRequests": 1,
+  "httpStatus": 429,
+  "clientRoundTripMs": 895,
+  "retryAfter": "68178",
+  "returnedCount": 0
+}

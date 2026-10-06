@@ -1,0 +1,67 @@
+{
+  "checkedAt": "2026-10-06T08:14:29.731Z",
+  "dataset": "llm-jp/jawildtext",
+  "config": "receipt_kie",
+  "split": "train",
+  "offset": 0,
+  "imageCount": 10,
+  "additionalGeminiRequests": 0,
+  "metadata": {
+    "imageCount": 10,
+    "model": "gemini-3.8-flash",
+    "processingTimeMs": 79761,
+    "usage": {
+      "inputTokens": 11608,
+      "outputTokens": 3036,
+      "totalTokens": 14644,
+      "thoughtTokens": 0
+    }
+  },
+  "fields": {
+    "merchant": {
+      "correct": 6,
+      "scored": 10
+    },
+    "date": {
+      "correct": 10,
+      "scored": 10
+    },
+    "total": {
+      "correct": 9,
+      "scored": 10
+    },
+    "tax": {
+      "correct": 8,
+      "scored": 9
+    }
+  },
+  "merchantMismatchIds": [
+    "receipt-001",
+    "receipt-003",
+    "receipt-004",
+    "receipt-010"
+  ],
+  "items": {
+    "tp": 27,
+    "fp": 15,
+    "fn": 12,
+    "precision": 0.6428571428571429,
+    "recall": 0.6923076923076923,
+    "f1": 0.6666666666666666
+  },
+  "requestAttempts": [
+    {
+      "imageCount": 10,
+      "appHttpStatus": 502,
+      "upstreamHttpStatus": 503,
+      "serverPostDurationMsApprox": 18900,
+      "startedAt": "2026-10-06T08:09:43.190Z"
+    },
+    {
+      "imageCount": 10,
+      "appHttpStatus": 200,
+      "processingTimeMs": 79761,
+      "startedAt": "2026-10-06T08:11:11.686Z"
+    }
+  ]
+}

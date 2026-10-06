@@ -63,5 +63,18 @@
       "processingTimeMs": 79761,
       "startedAt": "2026-10-06T08:11:11.686Z"
     }
-  ]
+  ],
+  "manualReview": {
+    "total": {
+      "correct": 10,
+      "scored": 10,
+      "method": "9 automatic matches plus visual review of receipt-007"
+    },
+    "receipt007": {
+      "totalMatchesImage": true,
+      "referenceGroupingMisparsedAsDecimal": true,
+      "taxMissingInPrediction": true
+    },
+    "note": "Automatic scores above are retained unchanged; the total mismatch is caused by reference amount normalization."
+  }
 }

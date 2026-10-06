@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { Receipt } from "@/types/receipt";
 
 /**
  * Gemini レスポンスを実行時検証するための Zod スキーマ。
@@ -26,7 +25,7 @@ export const receiptSchema = z.object({
 export type ReceiptSchemaOutput = z.infer<typeof receiptSchema>;
 
 /** 検証済みデータを共有型として返す。 */
-export function parseReceipt(data: unknown): Receipt {
+export function parseReceipt(data: unknown): ReceiptSchemaOutput {
   return receiptSchema.parse(data);
 }
 

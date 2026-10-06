@@ -1,40 +1,13 @@
 import { GoogleGenAI } from "@google/genai";
 import { safeParseReceipt } from "@/lib/receiptSchema";
-import type { Receipt } from "@/types/receipt";
+import type { AllowedImageMimeType } from "@/lib/imageUpload";
+import type { Receipt, ReceiptAnalysisMetadata, ReceiptUsage } from "@/types/receipt";
 
 /** GEMINI_MODEL が未設定の場合に使用するモデル。 */
 export const DEFAULT_GEMINI_MODEL = "gemini-3.8-flash";
 
-/** アップロード画像の上限サイズ (10 MiB)。 */
-export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
-
-/** 受け付ける画像形式。 */
-export const ALLOWED_IMAGE_MIME_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-] as const;
-
-export type AllowedImageMimeType =
-  (typeof ALLOWED_IMAGE_MIME_TYPES)[number];
-
-export function isAllowedImageMimeType(
-  mimeType: string,
-): mimeType is AllowedImageMimeType {
-  return (ALLOWED_IMAGE_MIME_TYPES as readonly string[]).includes(mimeType);
-}
-
-export interface ReceiptUsage {
-  inputTokens: number | null;
-  outputTokens: number | null;
-  totalTokens: number | null;
-}
-
-export interface AnalyzeReceiptResult {
+export interface AnalyzeReceiptResult extends ReceiptAnalysisMetadata {
   receipt: Receipt;
-  model: string;
-  processingTimeMs: number;
-  usage: ReceiptUsage;
 }
 
 /** HTTP ステータスに対応付けられた解析失敗。メッセージは利用者向け日本語のみを持つ。 */
@@ -231,12 +204,6 @@ function toAnalysisError(error: unknown): ReceiptAnalysisError {
     return new ReceiptAnalysisError(
       502,
       "画像を解析できませんでした。別の画像でお試しください。",
-    );
-  }
-  if (status !== null && status >= 500) {
-    return new ReceiptAnalysisError(
-      502,
-      "解析サービスが一時的に利用できません。しばらく待ってから再度お試しください。",
     );
   }
   return new ReceiptAnalysisError(

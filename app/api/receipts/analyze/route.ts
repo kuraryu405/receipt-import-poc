@@ -1,15 +1,19 @@
 import {
   DEFAULT_GEMINI_MODEL,
-  MAX_FILE_SIZE_BYTES,
   ReceiptAnalysisError,
   analyzeReceiptImage,
-  isAllowedImageMimeType,
 } from "@/lib/receiptAnalysis";
+import {
+  MAX_FILE_SIZE_BYTES,
+  MAX_FILE_SIZE_MIB,
+  SUPPORTED_FORMAT_LABEL,
+  isAllowedImageMimeType,
+} from "@/lib/imageUpload";
+import type { AnalyzeReceiptResponse } from "@/types/receipt";
 
 export const runtime = "nodejs";
 
 const FILE_FIELD = "file";
-const MAX_FILE_SIZE_MIB = 10;
 
 function errorResponse(status: number, message: string): Response {
   return Response.json({ error: message }, { status });
@@ -30,7 +34,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!(entry instanceof File)) {
     return errorResponse(
       400,
-      "画像ファイル（file）が送信されていません。JPEG・PNG・WebP のいずれかをお送りください。",
+      `画像ファイル（file）が送信されていません。${SUPPORTED_FORMAT_LABEL} のいずれかをお送りください。`,
     );
   }
   if (entry.size <= 0) {
@@ -48,7 +52,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!isAllowedImageMimeType(entry.type)) {
     return errorResponse(
       415,
-      "JPEG・PNG・WebP 形式の画像をお送りください。",
+      `${SUPPORTED_FORMAT_LABEL} 形式の画像をお送りください。`,
     );
   }
 
@@ -77,7 +81,7 @@ export async function POST(request: Request): Promise<Response> {
         processingTimeMs: result.processingTimeMs,
         usage: result.usage,
       },
-    });
+    } satisfies AnalyzeReceiptResponse);
   } catch (error) {
     if (error instanceof ReceiptAnalysisError) {
       return errorResponse(error.status, error.message);

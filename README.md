@@ -10,7 +10,10 @@ Next.js / TypeScript / React と Google 公式 SDK `@google/genai` を使用し�
 
 ブラウザーの画像入力 → Next.js Route Handler → Gemini Interactions API（画像＋JSON Schema）→ Zod 検証済みの `Receipt` → 結果画面、という構成です。Gemini 呼び出しと API キーはサーバー側に限定します。
 
-- `app/page.tsx` / `app/globals.css`: アップロード、プレビュー、結果、処理状態を表示
+- `app/page.tsx` / `app/globals.css`: ページ構成と共通スタイル
+- `src/components/ReceiptImporter.tsx` / `ReceiptResults.tsx`: アップロード、プレビュー、結果、処理状態を表示
+- `src/hooks/useReceiptAnalysis.ts`: ファイル選択、プレビューURLの管理、解析APIとの通信
+- `src/lib/imageUpload.ts`: フロント・サーバー共通の画像形式とサイズ制限
 - `app/api/receipts/analyze/route.ts`: 画像の受信・検証・日本語エラー応答
 - `src/lib/receiptAnalysis.ts`: モデル定数、抽出指示、Structured Output、処理時間・usage の取得
 - `src/lib/receiptSchema.ts` / `src/types/receipt.ts`: 検証と再利用可能な `Receipt` 型

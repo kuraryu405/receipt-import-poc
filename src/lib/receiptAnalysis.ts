@@ -1,4 +1,4 @@
-import { ApiError, GoogleGenAI } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { safeParseReceipt } from "@/lib/receiptSchema";
 import type { Receipt } from "@/types/receipt";
 
@@ -135,19 +135,22 @@ export async function analyzeReceiptImage(
   };
 
   try {
-    const interaction = await ai.interactions.create({
-      model: input.model,
-      input: [
-        { type: "text", text: RECEIPT_EXTRACTION_PROMPT },
-        { type: "image", data: input.imageBase64, mime_type: input.mimeType },
-      ],
-      response_format: {
-        type: "text",
-        mime_type: "application/json",
-        schema: RECEIPT_JSON_SCHEMA,
+    const interaction = await ai.interactions.create(
+      {
+        model: input.model,
+        input: [
+          { type: "text", text: RECEIPT_EXTRACTION_PROMPT },
+          { type: "image", data: input.imageBase64, mime_type: input.mimeType },
+        ],
+        response_format: {
+          type: "text",
+          mime_type: "application/json",
+          schema: RECEIPT_JSON_SCHEMA,
+        },
+        store: false,
       },
-      store: false,
-    });
+      { maxRetries: 0, timeout: 180_000 },
+    );
     outputText = interaction.output_text;
     usage = {
       inputTokens: interaction.usage?.total_input_tokens ?? null,
@@ -156,7 +159,10 @@ export async function analyzeReceiptImage(
     };
   } catch (error) {
     // 上流の詳細は返さず、状態に応じた定型メッセージに変換する。
-    console.error("[receipts/analyze] Gemini API call failed");
+    console.error(
+      "[receipts/analyze] Gemini API call failed:",
+      getHttpStatus(error) ?? null,
+    );
     throw toAnalysisError(error);
   }
 
@@ -196,34 +202,78 @@ export async function analyzeReceiptImage(
 
 /** SDK のエラーを利用者向けの定型メッセージ付き ReceiptAnalysisError に変換する。 */
 function toAnalysisError(error: unknown): ReceiptAnalysisError {
-  if (error instanceof ApiError) {
-    if (error.status === 429) {
-      return new ReceiptAnalysisError(
-        429,
-        "リクエストが集中しています。しばらく待ってから再度お試しください。",
-      );
-    }
-    if (error.status === 401 || error.status === 403) {
-      return new ReceiptAnalysisError(
-        500,
-        "サーバーのAPIキー設定に問題があります。管理者にお問い合わせください。",
-      );
-    }
-    if (error.status === 400) {
-      return new ReceiptAnalysisError(
-        502,
-        "画像を解析できませんでした。別の画像でお試しください。",
-      );
-    }
-    if (error.status >= 500) {
-      return new ReceiptAnalysisError(
-        502,
-        "解析サービスが一時的に利用できません。しばらく待ってから再度お試しください。",
-      );
-    }
+  if (isTimeoutError(error)) {
+    return new ReceiptAnalysisError(
+      504,
+      "解析がタイムアウトしました。しばらく待ってから再度お試しください。",
+    );
+  }
+  const status = getHttpStatus(error);
+  if (status === 429) {
+    return new ReceiptAnalysisError(
+      429,
+      "APIの利用上限に達しました（レート制限）。しばらく待ってから再度お試しください。",
+    );
+  }
+  if (status === 401 || status === 403) {
+    return new ReceiptAnalysisError(
+      500,
+      "サーバーのAPIキー設定に問題があります。管理者にお問い合わせください。",
+    );
+  }
+  if (status === 404) {
+    return new ReceiptAnalysisError(
+      500,
+      "指定されたモデルが見つかりません。管理者にお問い合わせください。",
+    );
+  }
+  if (status === 400) {
+    return new ReceiptAnalysisError(
+      502,
+      "画像を解析できませんでした。別の画像でお試しください。",
+    );
+  }
+  if (status !== null && status >= 500) {
+    return new ReceiptAnalysisError(
+      502,
+      "解析サービスが一時的に利用できません。しばらく待ってから再度お試しください。",
+    );
   }
   return new ReceiptAnalysisError(
     502,
     "解析サービスが一時的に利用できません。しばらく待ってから再度お試しください。",
   );
+}
+
+/**
+ * 未知のエラーから HTTP ステータスのみを安全に読み取る。
+ * Interactions 系の内部エラー (APIError/RateLimitError 等) は
+ * 公開 ApiError ではないため instanceof を使わず、
+ * status → statusCode の順に有限の整数 (100..599) のみ受け付ける。
+ */
+function getHttpStatus(error: unknown): number | null {
+  if (typeof error !== "object" || error === null) {
+    return null;
+  }
+  const record = error as Record<string, unknown>;
+  for (const key of ["status", "statusCode"] as const) {
+    const value = record[key];
+    if (
+      typeof value === "number" &&
+      Number.isInteger(value) &&
+      value >= 100 &&
+      value <= 599
+    ) {
+      return value;
+    }
+  }
+  return null;
+}
+
+/** クライアント側タイムアウト (APIConnectionTimeoutError) かを名前で判定する。 */
+function isTimeoutError(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+  return (error as { name?: unknown }).name === "APIConnectionTimeoutError";
 }
